@@ -6,6 +6,10 @@ using System.Windows.Controls;
 using System.IO;
 using System.Net;
 using System.Diagnostics;
+using System.Linq;
+using System.Data.Linq;
+using System.Windows.Data;
+using System.Xml.Linq;
 /*
 using System.Linq;
 using System.Windows.Data;
@@ -46,7 +50,7 @@ namespace rhel {
         }
 
         public void launchAccount() {
-            string exefilePath = Path.Combine(this.main.evePath(), "bin", "ExeFile.exe");
+            string exefilePath = Path.Combine(this.main.EvePath, "bin", "ExeFile.exe");
             if (!File.Exists(exefilePath)) {
                 this.main.showBalloon("eve path", "could not find " + exefilePath, System.Windows.Forms.ToolTipIcon.Error);
                 return;
@@ -80,7 +84,7 @@ namespace rhel {
             System.Diagnostics.ProcessStartInfo psi = new System.Diagnostics.ProcessStartInfo(
                 @".\bin\ExeFile.exe", String.Format(args, ssoToken)
             );
-            psi.WorkingDirectory = this.main.evePath();
+            psi.WorkingDirectory = this.main.EvePath;
             System.Diagnostics.Process.Start(psi);
         }
 
@@ -135,12 +139,26 @@ namespace rhel {
         }
 
         private void credentialsChanged(object sender, EventArgs e) {
-            this.main.updateCredentials();
+            if (this.main != null)
+                this.main.updateCredentials();
         }
             
         private void charSelect_Click(object sender, RoutedEventArgs e) {
-            CharSelect cs = new CharSelect(this);
+            CharSelect cs = new CharSelect(this, this.accountID.Tag);
+            /*cs.save.Click += (s, e2) =>
+            {
+                foreach (var child in cs.CharacterPanel.Children.Cast<CSelect>()
+                    .Where(x => x.selected.IsChecked.HasValue && x.selected.IsChecked.Value))
+                {
+                    // Do Work
+                }
+            };*/
             cs.Show();
+        }
+
+        void save_Click(object sender, RoutedEventArgs e)
+        {
+            throw new NotImplementedException();
         }
 
         private void idEnable_Click(object sender, RoutedEventArgs e) {
@@ -159,26 +177,29 @@ namespace rhel {
         private void findID_Click(object sender, RoutedEventArgs e) {
             System.DateTime time = System.DateTime.UtcNow;
             this.launchAccount();
-            int ID = 0;
-            while (ID == 0) {
-                var files = System.IO.Directory.EnumerateFiles(this.settingsPath, "core_user_*.dat");
-                foreach (string file in System.IO.Directory.EnumerateFiles(this.settingsPath, "core_user_*.dat" )) {
+            List<int> IDs = new List<int>();
+            while (IDs.Count == 0)
+            {
+                var files = System.IO.Directory.EnumerateFiles(this.settingsPath, "core_char_*.dat");
+                foreach (string file in files)
+                {
 
-                    System.DateTime access = System.IO.File.GetLastAccessTimeUtc(file);
-                    string[] split = file.Split(new string[] { "core_user_", ".dat" }, StringSplitOptions.None);
+                    System.DateTime access = System.IO.File.GetLastWriteTimeUtc(file);
+                    string[] split = file.Split(new string[] { "core_char_", ".dat" }, StringSplitOptions.None);
                     if (split[1] != "_" && access > time) {
                         time = access;
-                        ID = Convert.ToInt32(split[1]);
+                        IDs.Add(Convert.ToInt32(split[1]));
                     }
 
                 }
                 
             }
-            this.accountID.Text = Convert.ToString(ID);
+            this.accountID.Tag = string.Join(",", IDs.ToArray());
             Process[] eve = System.Diagnostics.Process.GetProcessesByName("exefile");
             foreach (Process aProc in eve) {
                 aProc.Kill();
             }
+            this.charSelect.IsEnabled = true;
         }
 
 

@@ -43,7 +43,7 @@ namespace rhel {
                     Properties.Settings.Default.Save();
                 }
             }
-            this.txtEvePath.Text = Properties.Settings.Default.evePath;
+            this.txtEvePath.Text = EvePath;
             this.tray = new System.Windows.Forms.NotifyIcon();
             this.tray.Icon = System.Drawing.Icon.ExtractAssociatedIcon(Application.ResourceAssembly.Location);
             this.tray.Text = this.Title;
@@ -146,7 +146,7 @@ namespace rhel {
         }
 
         private void txtEvePath_LostFocus(object sender, RoutedEventArgs e) {
-            this.evePath(this.txtEvePath.Text);
+            this.SetEvePath(this.txtEvePath.Text);
         }
 
         private void browse_Click(object sender, RoutedEventArgs e) {
@@ -155,7 +155,7 @@ namespace rhel {
             fbd.SelectedPath = this.txtEvePath.Text;
             if (fbd.ShowDialog() == System.Windows.Forms.DialogResult.OK) {
                 this.txtEvePath.Text = fbd.SelectedPath;
-                this.evePath(fbd.SelectedPath);
+                this.SetEvePath(fbd.SelectedPath);
             }
         }
 
@@ -169,13 +169,41 @@ namespace rhel {
             this.groupsPanel.Children.Add(group);
         }
 
-        public string evePath() {
-            return Properties.Settings.Default.evePath;
+        public string EvePath
+        {
+            get
+            {
+                if (string.IsNullOrEmpty(Properties.Settings.Default.evePath))
+                { // Attempts to find the install directory if first time loading
+                    foreach (var path in InstallationPaths)
+                    {
+                        if (Directory.Exists(path))
+                        {
+                            Properties.Settings.Default.evePath = path;
+                            Properties.Settings.Default.Save();                            
+                            break;
+                        }
+                    }
+                }
+                return Properties.Settings.Default.evePath;
+            }
+        }
+        public string EveExeFile
+        {
+            get
+            {
+                if (string.IsNullOrEmpty(EvePath))
+                    throw new FileNotFoundException("Unable to find the location of your EVE installation");
+
+                return Path.Combine(EvePath, "bin", "ExeFile.exe");
+            }
         }
 
-        public void evePath(string path) {
+
+        public void SetEvePath(string path) {
             string exefilePath = Path.Combine(path, "bin", "ExeFile.exe");
-            if (File.Exists(exefilePath)) {
+            if (File.Exists(exefilePath))
+            {
                 Properties.Settings.Default.evePath = path;
                 Properties.Settings.Default.Save();
             }
@@ -228,7 +256,7 @@ namespace rhel {
 
         public bool checkClientVersion() {
             this.updateEveVersion();
-            StreamReader sr = new StreamReader(this.evePath() + "\\start.ini");
+            StreamReader sr = new StreamReader(this.EvePath + "\\start.ini");
             List<string> lines = new List<string>();
             while (!sr.EndOfStream) {
                 lines.Add(sr.ReadLine());
@@ -240,7 +268,7 @@ namespace rhel {
             }
             else {
                 System.Diagnostics.ProcessStartInfo repair = new System.Diagnostics.ProcessStartInfo(@".\repair.exe", "-c");
-                repair.WorkingDirectory = this.evePath();
+                repair.WorkingDirectory = this.EvePath;
                 System.Diagnostics.Process.Start(repair);
                 return false;
             }
@@ -274,7 +302,7 @@ namespace rhel {
 
         private void patchClient_Click(object sender, RoutedEventArgs e) {
             System.Diagnostics.ProcessStartInfo repair = new System.Diagnostics.ProcessStartInfo(@".\repair.exe", "-c");
-            repair.WorkingDirectory = this.evePath();
+            repair.WorkingDirectory = this.EvePath;
             System.Diagnostics.Process.Start(repair);
         }
 
@@ -328,18 +356,15 @@ namespace rhel {
             ui.Show();
         }
 
+        private string[] InstallationPaths = 
+        {             
+            Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles) + @"\CCP\EVE\",
+            Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86) + @"\CCP\EVE\",                                          
+        };
+        private string AppPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData) + @"\CCP\EVE\";
+
         public string localAppPath() {
-            string startPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-            startPath += "\\CCP\\EVE\\";
-            string appdata = startPath;
-            string evepath = this.evePath();
-            string[] split = evepath.Split(new string[] { "\\", " " }, StringSplitOptions.None);
-            split[0] = split[0].Substring(0, 1);
-            foreach (string s in split) {
-                appdata += string.Format("{0}_", s);
-            }
-            appdata += "tranquility";
-            string[] splat = appdata.Split(new string[] { " " }, StringSplitOptions.None);
+            var appdata = string.Format("{0}{1}tranquility", this.AppPath, this.EvePath.Replace("\\", "_").Replace(" ","_").Replace(":",""));
             return appdata;
         }
     }

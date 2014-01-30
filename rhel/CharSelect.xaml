@@ -6,6 +6,7 @@
         <ScrollViewer Name="characterView" Margin="0,0,0,42">
             <StackPanel Name="CharacterPanel" Margin="0" />
         </ScrollViewer>
+        <Button Content="Save" Name="save" Height="23" Width="97" Margin="12,271,0,12" HorizontalAlignment="Right" />
         <Button Content="Back" Name="cancel" Height="23" Width="97" Click="cancel_Click" Margin="12,271,0,12" HorizontalAlignment="Left" />
     </Grid>
 </Window>

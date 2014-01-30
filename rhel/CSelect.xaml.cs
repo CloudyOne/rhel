@@ -18,6 +18,7 @@ namespace rhel {
     /// </summary>
     public partial class CSelect : UserControl {
         public int charID;
+        public int userID;
         public CSelect() {
             InitializeComponent();
         }

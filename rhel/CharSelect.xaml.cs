@@ -18,9 +18,12 @@ namespace rhel {
     public partial class CharSelect : Window {
         private string settingsPath;
         private Account acct;
-        public CharSelect(Account acct) {
+        private List<string> SpecificIDs = new List<string>();
+
+        public CharSelect(Account acct, object specificIDs) {
             InitializeComponent();
             this.acct = acct;
+            this.SpecificIDs = string.Format("{0}", specificIDs).Split(',').ToList();
             this.settingsPath = String.Format("{0}\\{1}", this.acct.main.localAppPath(), "settings");
             this.popListFromFile();
             this.popListFromSettings();
@@ -45,7 +48,12 @@ namespace rhel {
                 character.charID = Convert.ToInt32(split[0]);
                 character.charName.Text = split[1];
 
-                this.CharacterPanel.Children.Add(character);
+                // Handles old files that do not have the userID
+                if (split.Length > 2) 
+                    character.userID = Convert.ToInt32(split[2]);
+                // Only show if no id was specified, or character matches id
+                if (SpecificIDs.Count == 0 || SpecificIDs.Contains(character.userID.ToString()))
+                    this.CharacterPanel.Children.Add(character);
                 
             }
         }
@@ -59,7 +67,7 @@ namespace rhel {
                     if (reader.IsEmptyElement) {
                         CSelect cha = new CSelect();
                         cha.charName.Text = reader.GetAttribute(0);
-                        cha.charID = Convert.ToInt32(reader.GetAttribute(1));
+                        cha.charID = Convert.ToInt32(reader.GetAttribute(1));                        
                         charlist.Add(cha);
                     }
                 }
@@ -91,10 +99,15 @@ namespace rhel {
                 }
             }
             string ids = "";
-            foreach (int i in temp) {
-                ids += String.Format("{0}{1}", i, ",");
+            if (SpecificIDs.Count == 0)
+            {
+                foreach (int i in temp)
+                {
+                    ids += String.Format("{0}{1}", i, ",");
+                }
+                ids = ids.Substring(0, ids.Length - 1);
             }
-            ids = ids.Substring(0, ids.Length - 1);
+            else ids = string.Join(",",SpecificIDs.ToArray());
             return ids;
         }
 
